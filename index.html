@@ -164,13 +164,6 @@
                     return true;
                 }
                 return false;
-                var c = _.creditsAt(this.level || 1),
-                    d = c;
-                while (this.level > 1 && d == c) {
-                    this.level -= (this.level > 50) ? 5 : 1;
-                    d = _.creditsAt(this.level);
-                }
-                return d != c;
             },
             'level-up': function() {
                 if (this.level < 275) {
@@ -178,13 +171,6 @@
                     return true;
                 }
                 return false;
-                var c = _.creditsAt(this.level || 1),
-                    d = c;
-                while (this.level < 276 && d == c) {
-                    this.level += (this.level < 50) ? 1 : 5;
-                    d = _.creditsAt(this.level);
-                }
-                return d != c;
             },
             'skill-down': function(e) {
                 var a = $(e), n = a.data('skill'),
