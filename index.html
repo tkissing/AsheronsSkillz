@@ -1,0 +1,335 @@
+<html>
+<head>
+    <title>Character Skill Planner for Asheron's Call</title>
+    <script src="scripts/3rd-party/jquery.js"></script>
+    <script src="scripts/3rd-party/jquery-ui.js"></script>
+    <script src="scripts/3rd-party/jquery-tmpl.js"></script>
+    <script src="scripts/3rd-party/jquery-url.js"></script>
+    <script src="scripts/charplan.js"></script>
+
+    <link rel="stylesheet" href="styles/charplan.css">
+</head>
+<body>
+
+<h1>The Quick and Dirty Skill Planner for Asheron's Call (tm)</h1>
+
+<aside class="log"></aside>
+
+<form method="get" action="#">
+    <div class="box-credits"></div>
+    <div class='box-skills'></div>
+</form>
+
+<script id='template-credits' type="text/x-jquery-tmpl">
+    <div class="credits">
+        <p><a href="{{= permaLink}}">PermaLink</a></p>
+        <p>
+            <strong>Level:</strong> <span class="lvl">{{= level}}</span>
+            <a class="ud" data-action="level-up">&#x21a5;</a>
+            <a class="ud" data-action="level-down">&#x21a7;</a>
+        </p>
+
+        <p>
+            <strong>Extra skill credits:</strong>
+            <label><input type="checkbox" name="s_r" {{if s_r}}checked{{/if}} >Ralirea</label>
+            <label><input type="checkbox" name="s_o" {{if s_o}}checked{{/if}} >Oswald</label>
+            <label><input type="checkbox" name="s_l1" {{if s_l1}}checked{{/if}} >Luminance 1</label>
+            <label><input type="checkbox" name="s_l2" {{if s_l2}}checked{{/if}} >Luminance 2</label>
+        </p>
+
+        <p>
+            <strong>Credits (free/total):</strong> {{= credits}}/{{= freeCredits}}
+            <a class='rst' data-action="skill-reset">[Reset all skills]</a>
+        </p>
+
+    </div>
+</script>
+
+<script id='template-skills' type="text/x-jquery-tmpl">
+    <div class="skills">
+        <h3>Specialized</h3>
+        <ol class="skills-s"></ol>
+        <h3>Trained</h3>
+        <ol class="skills-t"></ol>
+        <h3>Untrained</h3>
+        <ol class="skills-u"></ol>
+        <h3>Unusable</h3>
+        <ol class="skills-n"></ol>
+    </div>
+</script>
+
+<script id='template-skill' type="text/x-jquery-tmpl">
+    <li data-skill="{{= name}}">
+        <strong>{{= name}}:</strong>
+        <span>{{= formula}}</span>
+        <span>({{= stringCost}})</span>
+        <span>Invested: {{= totalCost}}</span>
+        <a class="ud" data-action="skill-up" data-skill="{{= name}}">&#x21a5;</a>
+        <a class="ud" data-action="skill-down" data-skill="{{= name}}">&#x21a7;</a>
+    </li>
+</script>
+
+<script>
+    (function($, _) {
+        var storage = $.isPlainObject(window.localStorage) ? window.localStorage : null,
+            toJSON = $.isPlainObject(window.JSON) && $.isFunction(JSON.stringify) ? JSON.stringify : null,
+            skillTmpl = $('#template-skill'),
+            l = $('.log'),
+            dohs = [
+                "You can't do that!",
+                "How is that supposed to work?",
+                "Stop it already!",
+                "You really need to stop trying this kind of stuff.",
+                "Are you sure you know what you are doing?",
+                "I give up on you."
+            ],
+            methods;
+
+        function time() {
+            var d = new Date(), m = d.getMinutes(), s = d.getSeconds();
+            return [ d.getHours(), m < 10 ? '0' + m : m, s < 10 ? '0' + s : s].join(':');
+        }
+
+        function log(msg) {
+            $('<div></div>').html([time(), '<i>' + msg + '</i>', '<br>'].join(' ')).prependTo(l);
+            l.find('div:eq(1)').filter(function() { return $(this).find('i').text() == msg; }).remove();
+            l.stop(true, true).effect('highlight');
+        }
+
+        function doh() {
+            log(dohs[0]);
+            dohs = dohs.slice(1).concat(dohs.shift());
+        }
+
+        function saveChar(c) {
+            if (c && c.sane && storage && toJSON) {
+                storage.setItem('lastChar', toJSON(c));
+                log('Saved build to local storage');
+            }
+        }
+
+        function renderChar(c, skipSkills) {
+            var e, f;
+
+            methods['sanitize'].apply(c);
+
+            f = {s:[], t:[]};
+            $.each('level:s:t:s_r:s_o:s_l1:s_l2'.split(':'), function(i, v) {
+                if (c[v] && (!$.isArray(c[v]) || c[v].length)) {
+                    f[v] = c[v];
+                }
+            });
+
+            f.t = $.map(f.t, function(v) {
+                var skill = _.skills[v];
+                return skill && skill.train ? v : null;
+            });
+
+            e = $.extend({
+                permaLink: '/charplan/?' + $.param(f, true)
+            }, c);
+
+            $.each('credits:skills'.split(':'), function(i, v) {
+                if (!i || !skipSkills) {
+                    var box = $('.box-' + v).empty();
+                    $('#template-' + v).tmpl(e).appendTo(box);
+                }
+            });
+
+            if (skipSkills) { return; }
+
+            $.each('u:t:s:n'.split(':'), function(i, prop) {
+                if (c[prop] && c[prop].length) {
+                    var to = $('.skills-' + prop);
+                    $.each(_.skills, function(j, skill) {
+                        if (c[prop].indexOf(skill.name) > -1) {
+                            var cost = [], s = $.extend({totalCost: 0}, skill);
+                            if (i === 1) { cost = [skill.train]; }
+                            if (i === 2) { cost = [skill.train, skill.spec]; }
+
+                            $.each(cost, function(i, v) { s.totalCost = s.totalCost + v; });
+                            s.stringCost = [skill.train, skill.spec].join('/');
+                            skillTmpl.tmpl(s).appendTo(to);
+                        }
+                    });
+                }
+            });
+        }
+
+        methods = {
+            'level-down': function() {
+                if (this.level > 1) {
+                    this.level = _.levelFor(_.creditsAt(this.level) - 1);
+                    this.sane = false;
+                    return true;
+                }
+                return false;
+                var c = _.creditsAt(this.level || 1),
+                    d = c;
+                while (this.level > 1 && d == c) {
+                    this.level -= (this.level > 50) ? 5 : 1;
+                    d = _.creditsAt(this.level);
+                }
+                return d != c;
+            },
+            'level-up': function() {
+                if (this.level < 275) {
+                    this.level = _.levelFor(_.creditsAt(this.level) + 1);
+                    return true;
+                }
+                return false;
+                var c = _.creditsAt(this.level || 1),
+                    d = c;
+                while (this.level < 276 && d == c) {
+                    this.level += (this.level < 50) ? 1 : 5;
+                    d = _.creditsAt(this.level);
+                }
+                return d != c;
+            },
+            'skill-down': function(e) {
+                var a = $(e), n = a.data('skill'),
+                    prop = a.parents('ol').attr('class').split('-').pop();
+                this[prop] = $.map(this[prop], function(v) {
+                    return v == n ? null : v;
+                });
+                if (prop == 's') { this.t.push(n); }
+                methods.sanitize.apply(this);
+                return true;
+            },
+            'skill-up': function(e) {
+                var a = $(e), n = a.data('skill'),
+                    prop = a.parents('ol').attr('class').split('-').pop();
+                if (prop == 's') { return false; }
+                this[prop == 't' ? 's' : 't'].push(n);
+                methods.sanitize.apply(this);
+                return true;
+            },
+            'skill-reset': function() {
+                this.s = [];
+                this.t = [];
+                methods.sanitize.apply(this);
+                return true;
+            },
+            'sanitize': function() {
+                if (this.sane) {
+                    return;
+                }
+
+                var o = $.extend({s:[], t: []}, this),
+                    c = $.extend({}, o);
+
+                c.level = Math.min(275, Math.max(1, parseInt(c.level, 10) || 1));
+                c.credits = _.creditsAt(c.level);
+
+                $.each({'s_r': 30, 's_o': 90, 's_l1': 200, 's_l2': 200}, function(extra, minLvl) {
+                    c[extra] = (c[extra] && c.level >= minLvl) ? 1 : 0;
+                    if (c[extra]) {
+                        c.credits = c.credits + 1;
+                    }
+                });
+
+                c.freeCredits = c.credits;
+                c.freeSpec = 70;
+                c.allSkills = [];
+                $.each('s:t:u:n'.split(':'), function(i, v) { c[v] = []; });
+
+                $.each(o.s, function(i, v) {
+                    var skill = _.skills[v] || null, cost;
+                    if (skill && c.allSkills.indexOf(v) < 0) {
+                        cost = (skill.train || 0) + (skill.spec || 0);
+                        if (cost <= c.freeCredits && cost <= c.freeSpec) {
+                            c.freeCredits = c.freeCredits - cost;
+                            c.freeSpec = c.freeSpec - cost;
+                            c.s.push(v);
+                            c.allSkills.push(v);
+                        } else {
+                            o.t.push(v);
+                        }
+                    }
+                });
+
+                $.each(o.t, function(i, v) {
+                    var skill = _.skills[v] || null, cost;
+                    if (skill && c.allSkills.indexOf(v) < 0) {
+                        cost = skill.train || 0;
+                        if (cost <= c.freeCredits) {
+                            c.freeCredits = c.freeCredits - cost;
+                            c.freeSpec = c.freeSpec - cost;
+                            c.t.push(v);
+                            c.allSkills.push(v);
+                        }
+                    }
+                });
+
+                $.each(_.skills, function(name, skill) {
+                    if (c.allSkills.indexOf(name) < 0) {
+                        var prop = skill.train ? (skill.status == 'Unusable' ? 'n' : 'u') : 't';
+                        c[prop].push(name);
+                        c.allSkills.push(name);
+                    }
+                });
+
+                $.extend(this, c, {sane: true});
+            }
+        };
+
+        $(document).ready(function() {
+            var toon = $.extend({}, $.deparam.querystring()),
+                tmp;
+
+            if (!toon.level && storage) {
+                tmp = storage.getItem('lastChar');
+                if (tmp) {
+                    toon = $.parseJSON(tmp);
+                    log('Restored last build from local storage');
+                }
+            }
+
+            toon = $.extend({ level: 1 }, toon);
+            toon.sane = false;
+
+            renderChar(toon);
+            
+            $('body').on('click', 'a.ud, a.rst', function(evt) {
+                var action = $(this).data('action');
+                if (action && methods[action]) {
+                    if (methods[action].apply(toon, $(this))) {
+                        toon.sane = false;
+                        renderChar(toon, /^level-/.test(action) && toon.sane);
+                        if (/^skill-[ud]/.test(action)) {
+                            saveChar(toon);
+                        }
+                    } else {
+                        doh();
+                    }
+                }
+                return $(this).blur() && false;
+            });
+
+            $('body').on('change', 'input:checkbox', function(evt) {
+                var thisJ = $(this), field = thisJ.attr('name'),
+                    checked = thisJ.is(':checked');
+
+                toon[field] = checked;
+                toon.sane = false;
+                methods['sanitize'].apply(toon);
+                if (toon[field] == checked) {
+                    renderChar(toon);
+                } else {
+                    thisJ.prop('checked', toon[field]);
+                    doh();
+                }
+            });
+
+            $('form').submit(function() { return false; });
+
+        });
+
+    }(jQuery, window.GameData));
+
+</script>
+
+
+</body>
+
+</html>

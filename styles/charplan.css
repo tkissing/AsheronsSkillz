@@ -1,0 +1,46 @@
+body, h3 {
+    color: #666;
+    font-size: 14px;
+}
+aside {
+    display: block;
+    float: right;
+    width: 400px;
+}
+form {
+    width: 560px;
+}
+
+h3, p, ol {
+    margin: 6px 0;
+}
+a {
+    color: blue;
+    cursor: pointer;
+}
+
+li:hover {
+    background-color: #ddd;
+}
+
+li strong, li span {
+    display: inline-block;
+    margin: 0 5px;
+    width: 80px;
+}
+li strong {
+    color: #000;
+    font-variant: small-caps;
+    font-weight: normal;
+    width: 175px;
+}
+a.ud {
+    font-weight: bold;
+    margin: 0 4px;
+    width: 8px;
+}
+.lvl {
+    display: inline-block;
+    text-align: right;
+    width: 30px;
+}
