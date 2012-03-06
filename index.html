@@ -19,7 +19,7 @@
 
     <script>
         (function($) {
-            if ($.browser.msie) {
+            if (typeof [].indexOf != 'function') {
                 $.getScript('scripts/3rd-party/es5-shim.js');
             }
         }(jQuery));
