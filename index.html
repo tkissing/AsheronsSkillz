@@ -47,7 +47,7 @@
             <a class="ud" data-action="level-down">&#x21a7;</a>
         </p>
 
-        <p>
+        <p class='checkboxes'>
             <strong>Extra skill credits:</strong>
             <label><input type="checkbox" name="s_r" {{if s_r}}checked{{/if}} >Ralirea</label>
             <label><input type="checkbox" name="s_o" {{if s_o}}checked{{/if}} >Oswald</label>
@@ -156,7 +156,10 @@
             $('.box-credits').empty();
             $('#template-credits').tmpl(e).appendTo($('.box-credits'));
 
-            if (skipSkills) { return; }
+            if (skipSkills) {
+                $('body').trigger('content-updated');
+                return;
+            }
 
             $('.box-skills').empty();
             $('#template-skills').tmpl(e).appendTo($('.box-skills'));
@@ -179,6 +182,24 @@
             });
 
             $('.spec-usage').html($('#template-spec-usage').tmpl(c));
+            $('body').trigger('content-updated');
+        }
+
+        function bindClickHandler(toon) {
+            $('a.ud, a.rst').unbind('click').bind('click', function(evt) {
+                var action = $(this).data('action');
+                if (action && methods[action]) {
+                    if (methods[action].apply(toon, [this])) {
+                        renderChar(toon, /^level-up/.test(action));
+                        if (/^skill-[ud]/.test(action)) {
+                            saveChar(toon);
+                        }
+                    } else {
+                        doh();
+                    }
+                }
+                return $(this).blur() && false;
+            });
         }
 
         methods = {
@@ -293,6 +314,8 @@
                 $('body').addClass('touch');
             }
 
+            $('body').bind('content-updated', function() { bindClickHandler(toon); });
+
             if (!toon.level && storage) {
                 tmp = storage.getItem('lastChar');
                 if (tmp) {
@@ -310,21 +333,6 @@
             });
 
             renderChar(toon);
-
-            $('body').on('click', 'a.ud, a.rst', function(evt) {
-                var action = $(this).data('action');
-                if (action && methods[action]) {
-                    if (methods[action].apply(toon, $(this))) {
-                        renderChar(toon, /^level-up/.test(action));
-                        if (/^skill-[ud]/.test(action)) {
-                            saveChar(toon);
-                        }
-                    } else {
-                        doh();
-                    }
-                }
-                return $(this).blur() && false;
-            });
 
             $('body').on('change', 'input:checkbox', function(evt) {
                 var thisJ = $(this), field = thisJ.attr('name'),
