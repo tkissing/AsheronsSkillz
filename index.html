@@ -192,6 +192,7 @@
             'level-up': function() {
                 if (this.level < 275) {
                     this.level = _.levelFor(_.creditsAt(this.level) + 1);
+                    methods.sanitize.apply(this, [true]);
                     return true;
                 }
                 return false;
