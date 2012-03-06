@@ -95,6 +95,7 @@
     (function($, _) {
         var storage = $.isPlainObject(window.localStorage) ? window.localStorage : null,
             toJSON = $.isPlainObject(window.JSON) && $.isFunction(JSON.stringify) ? JSON.stringify : null,
+            isTouch = typeof document.ontouchstart == 'object',
             skillTmpl = $('#template-skill'),
             l = $('.log'),
             dohs = [
@@ -287,6 +288,10 @@
         $(document).ready(function() {
             var toon = $.extend({}, $.deparam.querystring()),
                 tmp;
+
+            if (isTouch) {
+                $('body').addClass('touch');
+            }
 
             if (!toon.level && storage) {
                 tmp = storage.getItem('lastChar');

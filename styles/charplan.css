@@ -8,7 +8,7 @@ aside {
     width: 400px;
 }
 form {
-    width: 560px;
+    width: 580px;
 }
 
 h3, p, ol {
@@ -26,18 +26,28 @@ li:hover {
 li strong, li span {
     display: inline-block;
     margin: 0 5px;
-    width: 80px;
+    width: 75px;
 }
 li strong {
     color: #000;
     font-variant: small-caps;
     font-weight: normal;
-    width: 175px;
+    width: 170px;
+}
+.touch li,
+.touch .checkboxes {
+    padding: 5px 0 10px;
 }
 a.ud {
     font-weight: bold;
     margin: 0 4px;
     width: 8px;
+}
+.touch a.ud {
+    font-size: 16px;
+    line-height: 16px;
+    margin: 0 10px;
+    padding: 0 5px;
 }
 .lvl {
     display: inline-block;
