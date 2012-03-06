@@ -47,7 +47,7 @@
 
 <script id='template-skills' type="text/x-jquery-tmpl">
     <div class="skills">
-        <h3>Specialized</h3>
+        <h3>Specialized <span class='spec-usage'></span></h3>
         <ol class="skills-s"></ol>
         <h3>Trained</h3>
         <ol class="skills-t"></ol>
@@ -56,6 +56,10 @@
         <h3>Unusable</h3>
         <ol class="skills-n"></ol>
     </div>
+</script>
+
+<script id='template-spec-usage' type='text/x-jquery-tmpl'>
+    ({{= freeSpec}} of 70 left)
 </script>
 
 <script id='template-skill' type="text/x-jquery-tmpl">
@@ -111,7 +115,7 @@
         function renderChar(c, skipSkills) {
             var e, f;
 
-            methods['sanitize'].apply(c);
+            methods.sanitize.apply(c);
 
             f = {s:[], t:[]};
             $.each('level:s:t:s_r:s_o:s_l1:s_l2'.split(':'), function(i, v) {
@@ -126,7 +130,7 @@
             });
 
             e = $.extend({
-                permaLink: '/charplan/?' + $.param(f, true)
+                permaLink: '?' + $.param(f, true)
             }, c);
 
             $.each('credits:skills'.split(':'), function(i, v) {
@@ -154,13 +158,15 @@
                     });
                 }
             });
+
+            $('.spec-usage').html($('#template-spec-usage').tmpl(c));
         }
 
         methods = {
             'level-down': function() {
                 if (this.level > 1) {
                     this.level = _.levelFor(_.creditsAt(this.level) - 1);
-                    this.sane = false;
+                    methods.sanitize.apply(this, [true]);
                     return true;
                 }
                 return false;
@@ -179,7 +185,8 @@
                     return v == n ? null : v;
                 });
                 if (prop == 's') { this.t.push(n); }
-                methods.sanitize.apply(this);
+
+                methods.sanitize.apply(this, [true]);
                 return true;
             },
             'skill-up': function(e) {
@@ -187,17 +194,17 @@
                     prop = a.parents('ol').attr('class').split('-').pop();
                 if (prop == 's') { return false; }
                 this[prop == 't' ? 's' : 't'].push(n);
-                methods.sanitize.apply(this);
+                methods.sanitize.apply(this, [true]);
                 return true;
             },
             'skill-reset': function() {
                 this.s = [];
                 this.t = [];
-                methods.sanitize.apply(this);
+                methods.sanitize.apply(this, [true]);
                 return true;
             },
-            'sanitize': function() {
-                if (this.sane) {
+            'sanitize': function(force) {
+                if (this.sane && !force) {
                     return;
                 }
 
@@ -240,7 +247,6 @@
                         cost = skill.train || 0;
                         if (cost <= c.freeCredits) {
                             c.freeCredits = c.freeCredits - cost;
-                            c.freeSpec = c.freeSpec - cost;
                             c.t.push(v);
                             c.allSkills.push(v);
                         }
@@ -271,8 +277,7 @@
                 }
             }
 
-            toon = $.extend({ level: 1 }, toon);
-            toon.sane = false;
+            toon = $.extend({ level: 1 }, toon, {sane: false});
 
             renderChar(toon);
             
@@ -280,8 +285,7 @@
                 var action = $(this).data('action');
                 if (action && methods[action]) {
                     if (methods[action].apply(toon, $(this))) {
-                        toon.sane = false;
-                        renderChar(toon, /^level-/.test(action) && toon.sane);
+                        renderChar(toon, /^level-up/.test(action));
                         if (/^skill-[ud]/.test(action)) {
                             saveChar(toon);
                         }
@@ -297,10 +301,9 @@
                     checked = thisJ.is(':checked');
 
                 toon[field] = checked;
-                toon.sane = false;
-                methods['sanitize'].apply(toon);
+                methods['sanitize'].apply(toon, [true]);
                 if (toon[field] == checked) {
-                    renderChar(toon);
+                    renderChar(toon, checked);
                 } else {
                     thisJ.prop('checked', toon[field]);
                     doh();
