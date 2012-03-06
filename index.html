@@ -152,14 +152,13 @@
             }, c);
 
 
-            $.each('credits:skills'.split(':'), function(i, v) {
-                if (!i || !skipSkills) {
-                    var box = $('.box-' + v).empty();
-                    $('#template-' + v).tmpl(e).appendTo(box);
-                }
-            });
+            $('.box-credits').empty();
+            $('#template-credits').tmpl(e).appendTo($('.box-credits'));
 
             if (skipSkills) { return; }
+
+            $('.box-skills').empty();
+            $('#template-skills').tmpl(e).appendTo($('.box-skills'));
 
             $.each('u:t:s:n'.split(':'), function(i, prop) {
                 if (c[prop] && c[prop].length) {
@@ -299,7 +298,7 @@
             toon = $.extend({ level: 1 }, toon, {sane: false});
 
             renderChar(toon);
-            
+
             $('body').on('click', 'a.ud, a.rst', function(evt) {
                 var action = $(this).data('action');
                 if (action && methods[action]) {
