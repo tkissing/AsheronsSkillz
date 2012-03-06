@@ -298,6 +298,12 @@
 
             toon = $.extend({ level: 1 }, toon, {sane: false});
 
+            $.each('s:t'.split(':'), function(i, v) {
+                if (toon[v] && !$.isArray(toon[v])) {
+                    toon[v] = [toon[v]];
+                }
+            });
+
             renderChar(toon);
 
             $('body').on('click', 'a.ud, a.rst', function(evt) {
