@@ -235,6 +235,13 @@
             "spec":2,
             "status":"Unusable"
         },
+		"Summoning":{
+            "name":"Summoning",
+            "formula":"(E+S)/3",
+            "train":8,
+            "spec":4,
+            "status":"Untrained"
+        },
         "Two Handed Combat":{
             "name":"Two Handed Combat",
             "formula":"(S+C)/3",
